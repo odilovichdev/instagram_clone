@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta
 import random
+import uuid
+from datetime import datetime, timedelta
 
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from shared.models import BaseModel
 
@@ -31,9 +33,9 @@ class User(AbstractUser, BaseModel):
         OPTIONAL = "OPTIONAL", _("Optional")
 
     user_type = models.CharField(max_length=13, choices=USER_TYPE, default=USER_TYPE.ORDINARY_USER)
-    auth_type = models.CharField(max_length=5, choices=AUTH_TYPE, default=AUTH_TYPE.EMAIL)
-    auth_status = models.CharField(max_length=13, choices=AUTH_STATUS, default=AUTH_STATUS.NEW)
-    gender = models.CharField(max_length=8, choices=GENDER, default=GENDER.OPTIONAL)
+    auth_type = models.CharField(max_length=5, choices=AUTH_TYPE)
+    auth_status = models.CharField(max_length=13, choices=AUTH_STATUS)
+    gender = models.CharField(max_length=8, choices=GENDER)
     email = models.EmailField(null=True, blank=True, unique=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True, unique=True)
     images = models.ImageField(upload_to='users/', null=True, blank=True,
@@ -45,10 +47,6 @@ class User(AbstractUser, BaseModel):
     def __str__(self):
         return self.username
 
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}"
-
     def create_verify_type(self, verify_type):
         code = "".join([str(random.randint(0, 100) % 10) for _ in range(4)])
         UserConfirmation.objects.create(
@@ -57,6 +55,46 @@ class User(AbstractUser, BaseModel):
             code=code
         )
         return code
+
+    def check_username(self):
+        if self.username:
+            temp_username = f"instagram-{uuid.uuid4().__str__().split('-')[-1]}"
+            while User.objects.filter(username=temp_username):
+                temp_username = f"{temp_username}{random.randint(0, 9)}"
+
+            self.username = temp_username
+
+    def check_email(self):
+        if self.email:
+            normalize_email = self.email.lower()
+            self.email = normalize_email
+
+    def check_pass(self):
+        if not self.password:
+            temp_password = f"instagram-{uuid.uuid4().__str__().split()[-1]}"
+            self.password = temp_password
+
+    def hashing_password(self):
+        if not self.password.startswith('pbkdf2_sha256'):
+            self.set_password(self.password)
+
+    def token(self):
+        refresh = RefreshToken.for_user(self)
+        return {
+            'access': str(refresh.access_token),
+            'refresh_token': str(refresh)
+        }
+
+    def clean(self):
+        self.check_email()
+        self.check_username()
+        self.check_pass()
+        self.hashing_password()
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            self.clean()
+        super(User, self).save(*args, **kwargs)
 
 
 PHONE_EXPIRE = 2
