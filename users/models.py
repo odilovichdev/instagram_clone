@@ -1,9 +1,8 @@
-import random
 import uuid
 from datetime import datetime, timedelta
+import random
 
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,37 +11,32 @@ from shared.models import BaseModel
 
 
 class User(AbstractUser, BaseModel):
-    class USER_TYPE(models.TextChoices):
+    class UserType(models.TextChoices):
         ADMIN = "ADMIN", _("Admin")
         MANAGER = "MANAGER", _("Manager")
-        ORDINARY_USER = "ORDINARY_USER", _("Ordinary_user")
+        ORDINARY_USER = "ORDINARY_USER", _("Ordinary user")
 
-    class AUTH_TYPE(models.TextChoices):
-        EMAIL = "EMAIL", _("Email")
-        PHONE = "PHONE", _("Phone")
+    class AuthType(models.TextChoices):
+        VIA_EMAIL = "VIA_EMAIL", _("Via email")
+        VIA_PHONE = "VIA_PHONE", _("Via phone")
 
-    class AUTH_STATUS(models.TextChoices):
+    class AuthStatus(models.TextChoices):
         NEW = "NEW", _("New")
-        VERIFIED_CODE = "VERIFIED_CODE", _("Verified_code")
+        VERIFY_CODE = "VERIFY_CODE", _("Verify code")
         DONE = "DONE", _("Done")
-        PHOTO_STEP = "PHONE_STEP", _("Photo_step")
+        PHOTO_STEP = "PHOTO_STEP", _("Photo step")
 
-    class GENDER(models.TextChoices):
+    class Gender(models.TextChoices):
         MALE = "MALE", _("Male")
         FEMALE = "FEMALE", _("Female")
-        OPTIONAL = "OPTIONAL", _("Optional")
 
-    user_type = models.CharField(max_length=13, choices=USER_TYPE, default=USER_TYPE.ORDINARY_USER)
-    auth_type = models.CharField(max_length=5, choices=AUTH_TYPE)
-    auth_status = models.CharField(max_length=13, choices=AUTH_STATUS)
-    gender = models.CharField(max_length=8, choices=GENDER)
-    email = models.EmailField(null=True, blank=True, unique=True)
-    phone_number = models.CharField(max_length=20, null=True, blank=True, unique=True)
-    images = models.ImageField(upload_to='users/', null=True, blank=True,
-                               validators=[FileExtensionValidator(
-                                   allowed_extensions=['jpg', 'jpeg', 'png', 'heic', 'heif']
-                               )]
-                               )
+    user_type = models.CharField(max_length=13, choices=UserType, default=UserType.ORDINARY_USER)
+    auth_type = models.CharField(max_length=9, choices=AuthType)
+    auth_status = models.CharField(max_length=11, choices=AuthStatus, default=AuthStatus.NEW)
+    gender = models.CharField(max_length=6, choices=Gender)
+    email = models.EmailField(unique=True, null=True, blank=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
+    image = models.ImageField(upload_to='users/', null=True, blank=True)
 
     def __str__(self):
         return self.username
@@ -50,14 +44,14 @@ class User(AbstractUser, BaseModel):
     def create_verify_type(self, verify_type):
         code = "".join([str(random.randint(0, 100) % 10) for _ in range(4)])
         UserConfirmation.objects.create(
-            user_id=self.id,
+            user_id=self.pk,
             verify_type=verify_type,
             code=code
         )
         return code
 
     def check_username(self):
-        if self.username:
+        if not self.username:
             temp_username = f"instagram-{uuid.uuid4().__str__().split('-')[-1]}"
             while User.objects.filter(username=temp_username):
                 temp_username = f"{temp_username}{random.randint(0, 9)}"
@@ -71,7 +65,7 @@ class User(AbstractUser, BaseModel):
 
     def check_pass(self):
         if not self.password:
-            temp_password = f"instagram-{uuid.uuid4().__str__().split()[-1]}"
+            temp_password = f"password-{uuid.uuid4().__str__().split('-')[-1]}"
             self.password = temp_password
 
     def hashing_password(self):
@@ -82,33 +76,33 @@ class User(AbstractUser, BaseModel):
         refresh = RefreshToken.for_user(self)
         return {
             'access': str(refresh.access_token),
-            'refresh_token': str(refresh)
+            'refresh_toekn': str(refresh)
         }
 
     def clean(self):
-        self.check_email()
         self.check_username()
+        self.check_email()
         self.check_pass()
         self.hashing_password()
 
     def save(self, *args, **kwargs):
-        if self.pk:
+        if not self.pk:
             self.clean()
         super(User, self).save(*args, **kwargs)
 
 
-PHONE_EXPIRE = 2
-EMAIL_EXPIRE = 5
+EXPIRE_EMAIL = 5
+EXPIRE_PHONE = 2
 
 
 class UserConfirmation(BaseModel):
-    class VERIFY_TYPE(models.TextChoices):
-        EMAIL = "EMAIL", _("Email")
-        PHONE = "PHONE", _("Phone")
+    class VerifyType(models.TextChoices):
+        VIA_EMAIL = "VIA_EMAIL", _("Via email")
+        VIA_PHONE = "VIA_PHONE", _("Via Phone")
 
     code = models.CharField(max_length=4)
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='verify_codes')
-    verify_type = models.CharField(max_length=5, choices=VERIFY_TYPE)
+    verify_type = models.CharField(max_length=9, choices=VerifyType)
     expiration_time = models.DateTimeField(null=True)
     is_confirmed = models.BooleanField(default=False)
 
@@ -116,10 +110,11 @@ class UserConfirmation(BaseModel):
         return str(self.user.__str__())
 
     def save(self, *args, **kwargs):
+        # TODO shu funksiyani tekshir
         if not self.pk:
-            if self.verify_type == self.VERIFY_TYPE.EMAIL:
-                self.expiration_time = datetime.now() + timedelta(minutes=EMAIL_EXPIRE)
+            if self.verify_type == self.VerifyType.VIA_EMAIL:
+                self.expiration_time = datetime.now() + timedelta(minutes=EXPIRE_EMAIL)
             else:
-                self.expiration_time = datetime.now() + timedelta(minutes=PHONE_EXPIRE)
+                self.expiration_time = datetime.now() + timedelta(minutes=EXPIRE_PHONE)
 
         super(UserConfirmation, self).save(*args, **kwargs)
