@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import random
 
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -36,7 +37,11 @@ class User(AbstractUser, BaseModel):
     gender = models.CharField(max_length=6, choices=Gender)
     email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    image = models.ImageField(upload_to='users/', null=True, blank=True)
+    image = models.ImageField(upload_to='users/', null=True, blank=True,
+                              validators=[FileExtensionValidator(
+                                  allowed_extensions=['jpeg', 'jpg', 'png','heic', 'heif']
+                              )]
+                              )
 
     def __str__(self):
         return self.username
@@ -53,7 +58,7 @@ class User(AbstractUser, BaseModel):
     def check_username(self):
         if not self.username:
             temp_username = f"instagram-{uuid.uuid4().__str__().split('-')[-1]}"
-            while User.objects.filter(username=temp_username):
+            while User.objects.filter(username=temp_username).exists():# ToDo exists ning vazifasini tekshir
                 temp_username = f"{temp_username}{random.randint(0, 9)}"
 
             self.username = temp_username
@@ -80,9 +85,9 @@ class User(AbstractUser, BaseModel):
         }
 
     def clean(self):
-        self.check_username()
         self.check_email()
         self.check_pass()
+        self.check_username()
         self.hashing_password()
 
     def save(self, *args, **kwargs):
