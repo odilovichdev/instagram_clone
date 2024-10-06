@@ -91,8 +91,10 @@ class User(AbstractUser, BaseModel):
         self.hashing_password()
 
     def save(self, *args, **kwargs):
-        if not self.pk:
-            self.clean()
+        # if not self.pk:
+        self.clean()
+        print("----------",self.phone_number)
+        print("----------",self.email)
         super(User, self).save(*args, **kwargs)
 
 
@@ -103,7 +105,7 @@ EXPIRE_PHONE = 2
 class UserConfirmation(BaseModel):
     class VerifyType(models.TextChoices):
         VIA_EMAIL = "VIA_EMAIL", _("Via email")
-        VIA_PHONE = "VIA_PHONE", _("Via Phone")
+        VIA_PHONE = "VIA_PHONE", _("Via phone")
 
     code = models.CharField(max_length=4)
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='verify_codes')
