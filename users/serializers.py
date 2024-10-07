@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from shared.utility import check_email_or_phone_number, send_email
+from shared.utility import check_email_or_phone_number, send_email, send_phone_code
 from users.models import User
+from users.views import send_code_email_or_phone
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -29,12 +30,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         user = super(SignUpSerializer, self).create(validated_data)
         # user -> email -> email jo'natish kk
         # user -> phone -> telefoniga kod ni jo'natish kk
-        if user.auth_type == User.AuthType.VIA_EMAIL:
-            code = user.create_verify_type(User.AuthType.VIA_EMAIL)
-            send_email(user.email, code)
-        elif user.auth_type == User.AuthType.VIA_PHONE:
-            code = user.create_verify_type(User.AuthType.VIA_PHONE)
-            # send_phone_code(user.phone_number, code)
+        send_code_email_or_phone(user)
         user.save()
         return user
 
@@ -86,7 +82,6 @@ class SignUpSerializer(serializers.ModelSerializer):
         return value
 
     def to_representation(self, instance):
-        print('to_rep', instance)
         data = super(SignUpSerializer, self).to_representation(instance)
         data.update(instance.token())
         return data

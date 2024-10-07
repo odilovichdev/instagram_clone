@@ -1,6 +1,6 @@
+import random
 import uuid
 from datetime import datetime, timedelta
-import random
 
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import FileExtensionValidator
@@ -39,7 +39,7 @@ class User(AbstractUser, BaseModel):
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     image = models.ImageField(upload_to='users/', null=True, blank=True,
                               validators=[FileExtensionValidator(
-                                  allowed_extensions=['jpeg', 'jpg', 'png','heic', 'heif']
+                                  allowed_extensions=['jpeg', 'jpg', 'png', 'heic', 'heif']
                               )]
                               )
 
@@ -58,7 +58,7 @@ class User(AbstractUser, BaseModel):
     def check_username(self):
         if not self.username:
             temp_username = f"instagram-{uuid.uuid4().__str__().split('-')[-1]}"
-            while User.objects.filter(username=temp_username).exists():# ToDo exists ning vazifasini tekshir
+            while User.objects.filter(username=temp_username).exists():  # ToDo exists ning vazifasini tekshir
                 temp_username = f"{temp_username}{random.randint(0, 9)}"
 
             self.username = temp_username
@@ -78,10 +78,10 @@ class User(AbstractUser, BaseModel):
             self.set_password(self.password)
 
     def token(self):
-        refresh = RefreshToken.for_user(self)
+        refresh = RefreshToken.for_user(self)  # ToDo
         return {
             'access': str(refresh.access_token),
-            'refresh_toekn': str(refresh)
+            'refresh_token': str(refresh)
         }
 
     def clean(self):
@@ -93,8 +93,6 @@ class User(AbstractUser, BaseModel):
     def save(self, *args, **kwargs):
         # if not self.pk:
         self.clean()
-        print("----------",self.phone_number)
-        print("----------",self.email)
         super(User, self).save(*args, **kwargs)
 
 
@@ -118,10 +116,9 @@ class UserConfirmation(BaseModel):
 
     def save(self, *args, **kwargs):
         # TODO shu funksiyani tekshir
-        if not self.pk:
-            if self.verify_type == self.VerifyType.VIA_EMAIL:
-                self.expiration_time = datetime.now() + timedelta(minutes=EXPIRE_EMAIL)
-            else:
-                self.expiration_time = datetime.now() + timedelta(minutes=EXPIRE_PHONE)
+        if self.verify_type == self.VerifyType.VIA_EMAIL:
+            self.expiration_time = datetime.now() + timedelta(minutes=EXPIRE_EMAIL)
+        else:
+            self.expiration_time = datetime.now() + timedelta(minutes=EXPIRE_PHONE)
 
         super(UserConfirmation, self).save(*args, **kwargs)

@@ -1,10 +1,15 @@
 import re
 import threading
+
+from decouple import config
 import phonenumbers
 
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from rest_framework.exceptions import ValidationError
+from twilio.rest import Client
+
+from users.models import User
 
 email_regex = re.compile(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -64,3 +69,18 @@ def send_email(email, code):
             'content_type': 'html',
         }
     )
+
+
+def send_phone_code(phone, code):
+    account_sid = config('account_sig')
+    auth_token = config("auth_token")
+    client = Client(account_sid, auth_token)
+    client.messages.create(
+        body=f"Salom, sizning tasdiqlash kodingiz {code}",
+        from_="+998907205768",
+        to=f"{phone}",
+    )
+
+
+
+
