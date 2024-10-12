@@ -25,7 +25,7 @@ class User(AbstractUser, BaseModel):
         NEW = "NEW", _("New")
         VERIFY_CODE = "VERIFY_CODE", _("Verify code")
         DONE = "DONE", _("Done")
-        PHOTO_STEP = "PHOTO_STEP", _("Photo step")
+        PHOTO_DONE = "PHOTO_DONE", _("Photo done")
 
     class Gender(models.TextChoices):
         MALE = "MALE", _("Male")
@@ -34,7 +34,6 @@ class User(AbstractUser, BaseModel):
     user_type = models.CharField(max_length=13, choices=UserType, default=UserType.ORDINARY_USER)
     auth_type = models.CharField(max_length=9, choices=AuthType)
     auth_status = models.CharField(max_length=11, choices=AuthStatus, default=AuthStatus.NEW)
-    gender = models.CharField(max_length=6, choices=Gender)
     email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     image = models.ImageField(upload_to='users/', null=True, blank=True,

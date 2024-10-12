@@ -1,15 +1,12 @@
 import re
 import threading
 
-from decouple import config
 import phonenumbers
-
+from decouple import config
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from rest_framework.exceptions import ValidationError
 from twilio.rest import Client
-
-from users.models import User
 
 email_regex = re.compile(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -18,6 +15,27 @@ email_regex = re.compile(
 phone_regex = re.compile(
     r'^(\+\d{1,3})?\s?\(?\d{1,4}\)?[\s.-]?\d{3}[\s.-]?\d{4}$'
 )
+
+username_regex = re.compile(
+    r"[a-zA-Z0-9]+(._)?"
+)
+
+
+def check_user_type(user_input):
+    if re.fullmatch(email_regex, user_input):
+        user_input = 'email'
+    elif re.fullmatch(phone_regex, user_input):
+        user_input = 'phone'
+    elif re.fullmatch(username_regex, user_input):
+        user_input = 'username'
+    else:
+        raise ValidationError(
+            {
+                "status": False,
+                "message": "Email, username yoki telefon nomer xato kiritildi"
+            }
+        )
+    return user_input
 
 
 def check_email_or_phone_number(email_or_phone):
@@ -35,6 +53,7 @@ def check_email_or_phone_number(email_or_phone):
         )
     return email_or_phone
 
+
 class EmailTread(threading.Thread):
 
     def __init__(self, email):
@@ -44,9 +63,10 @@ class EmailTread(threading.Thread):
     def run(self):
         self.email.send()
 
+
 class Email:
     @staticmethod
-    def send_email(data):# ToDo staticmethod ni o'rganish
+    def send_email(data):  # ToDo staticmethod ni o'rganish
         email = EmailMessage(
             subject=data['subject'],
             body=data['body'],
@@ -54,7 +74,8 @@ class Email:
         )
         if data.get('content-type') == 'html':
             email.content_subtype = 'html'
-        EmailTread(email).start() # ToDo thread larni o'rganish
+        EmailTread(email).start()  # ToDo thread larni o'rganish
+
 
 def send_email(email, code):
     html_content = render_to_string(
@@ -80,7 +101,3 @@ def send_phone_code(phone, code):
         from_="+998907205768",
         to=f"{phone}",
     )
-
-
-
-
