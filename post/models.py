@@ -19,6 +19,9 @@ class Post(BaseModel):
         verbose_name = "post"
         verbose_name_plural = "posts"
 
+    def __str__(self):
+        return f"{self.author} post about {self.caption}"
+
 
 class PostComment(BaseModel):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -31,6 +34,9 @@ class PostComment(BaseModel):
         null=True,
         blank=True
     )
+
+    def __str__(self):
+        return f"Comment by {self.author}"
 
 
 class PostLike(BaseModel):

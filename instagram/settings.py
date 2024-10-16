@@ -10,8 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
+
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -104,10 +105,10 @@ SIMPLE_JWT = {
 }
 
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES":[
+    "DEFAULT_PERMISSION_CLASSES": [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    "DEFAULT_AUTHENTICATION_CLASSES":[
+    "DEFAULT_AUTHENTICATION_CLASSES": [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication'
     ]
